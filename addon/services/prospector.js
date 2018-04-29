@@ -32,7 +32,7 @@ export default Ember.Service.extend({
 
   _cache: {},
 
-  async query(modelName, query) {
+  query(modelName, query) {
     const cache = this._findInCache(modelName, null, query);
 
     if (this._isCacheValid(cache, query)) {
@@ -45,9 +45,10 @@ export default Ember.Service.extend({
     }
     
     newQuery.include = this.serializeInclude(newQuery.include);
-    const data = await this.get('store').query(modelName, newQuery);
-    this._saveToCache(modelName, null, newQuery, data);
-    return data;
+    return this.get('store').query(modelName, newQuery).then(data => {
+      this._saveToCache(modelName, null, newQuery, data);
+      return data;
+    });
   },
 
   /*
