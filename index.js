@@ -2,5 +2,11 @@
 'use strict';
 
 module.exports = {
-  name: 'ember-prospector'
+  name: 'ember-prospector',
+
+  options: {
+    babel: {
+      plugins: ['transform-object-rest-spread'],
+    }
+  }
 };
