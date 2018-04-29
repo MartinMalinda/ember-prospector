@@ -10,6 +10,8 @@ Router.map(function() {
   this.route('user', function() {
     this.route('edit');
     this.route('comments');
+    this.route('comments-loading');
+    this.route('edit-loading');
   });
 });
 

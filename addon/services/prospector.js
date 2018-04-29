@@ -1,4 +1,6 @@
 import Service, { inject as service } from '@ember/service';
+import deepSet from 'ember-deep-set';
+import { isArray } from '@ember/array';
 
 export default Ember.Service.extend({
   store: service(),
@@ -30,7 +32,7 @@ export default Ember.Service.extend({
 
   _cache: {},
 
-  query(modelName, query) {
+  async query(modelName, query) {
     const cache = this._findInCache(modelName, null, query);
 
     if (this._isCacheValid(cache, query)) {
@@ -39,10 +41,13 @@ export default Ember.Service.extend({
 
     let newQuery = { ...query };
     if (cache && newQuery.include) {
-      newQuery.inclue = this._trimInclude(cache, newQuery.include);
+      newQuery.include = this._trimInclude(cache, newQuery.include);
     }
-
-    return this.get('store').query(modelName, newQuery);
+    
+    newQuery.include = this.serializeInclude(newQuery.include);
+    const data = await this.get('store').query(modelName, newQuery);
+    this._saveToCache(modelName, null, newQuery, data);
+    return data;
   },
 
   /*
@@ -70,8 +75,8 @@ export default Ember.Service.extend({
   */
   _trimInclude(cache, include) {
     const { alreadyIncluded } = cache;
-    return include.reject(relationshipName => {
-      return alreadyIncluded.includes(relationshipName);
+    return include.filter(relationshipName => {
+      return !alreadyIncluded.includes(relationshipName);
     });
   },
 
@@ -79,17 +84,19 @@ export default Ember.Service.extend({
     Universal method for finding cache for .query and .findRecord
   */
   _findInCache(modelName, id, query) {
+    return this.get(this._getCacheKeyForQuery(...arguments));
+  },
+
+  _getCacheKeyForQuery(modelName, id, query) {
     const queryWithoutInclude = this._queryWithoutInclude(query);
     const queryIsEmpty = this._isEmptyQuery(queryWithoutInclude);
-    const hasQuery = !queryIsEmpty;
 
     if (!id && queryIsEmpty) {
-      return this.get(`_cache.${modelName}.all`);
+      return `_cache.${modelName}.all`;
     }
 
-
     if (id && queryIsEmpty) {
-      return this.get('_cache.${modelName}.${id}');
+      return `_cache.${modelName}.${id}`;
     }
 
     const queryKey = JSON.stringify(queryWithoutInclude);
@@ -99,7 +106,57 @@ export default Ember.Service.extend({
       resourceKey = `${id}-${queryKey}`;
     }
 
-    return this.get('_cache.${modelName}.${resourceKey}');
+    return `_cache.${modelName}.${resourceKey}`;
+  },
+
+  _saveToCache(modelName, id, query, data) {
+    const existingCache = this._findInCache(modelName, id, query);
+
+    if (existingCache) {
+      this._updateCache(existingCache, modelName, id, query, data);
+    } else {
+      // the cache does not exist yet, create it
+      this._createCache(...arguments);
+    }
+  },
+
+  _createCache(modelName, id, query, data) {
+    const cacheKey = this._getCacheKeyForQuery(modelName, id, query);
+    deepSet(this, cacheKey, {
+      cachedData: data,
+      alreadyIncluded: this.deserializeInclude(query.include) || []
+    });
+  },
+
+  _updateCache(cache, modelName, id, query, data) {
+    if (query.include && query.include.length) {
+      // update the `alreadyIncluded`
+      const { alreadyIncluded } = cache;
+      this.deserializeInclude(query.include).forEach(relationshipName => {
+        if (!alreadyIncluded.includes(relationshipName)) {
+          alreadyIncluded.push(relationshipName);
+        }
+      });
+    }
+
+    // update the cacheData just in case, or for potential usecases of `reload: true`
+    cache.cacheData = data;
+  },
+
+  deserializeInclude(include) {
+    if (isArray(include)) {
+      return include;
+    }
+
+    return include && include.split(',') || [];
+  },
+
+  serializeInclude(include) {
+    if (typeof include === 'string') {
+      return include;
+    }
+
+    return include.join(',');
   },
 
   _queryWithoutInclude(query) {

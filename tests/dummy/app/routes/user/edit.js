@@ -6,7 +6,7 @@ export default Route.extend({
 
   model() {
     return this.get('prospector').query('user', {
-      include: ['threads', 'comments']
+      include: ['threads', 'roles']
     });
   }
 });

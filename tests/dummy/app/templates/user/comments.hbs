@@ -1,1 +1,11 @@
-{{outlet}}
+{{#with model.firstObject as |user|}}
+  <h2>Comments from user {{user.id}}</h2>
+
+  {{#each user.comments as |comment|}}
+    <li>Comment {{comment.id}}</li>
+  {{/each}}
+
+  {{#each user.roles as |role|}}
+    <li>Role {{user.id}}</li>
+  {{/each}}
+{{/with}}
