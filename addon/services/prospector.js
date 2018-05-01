@@ -88,6 +88,55 @@ export default Service.extend({
     return false;
   },
 
+  emptyCache(modelName, id, query, model) {
+    if (!modelName && !id && !query) {
+      // empty the whole cache
+      return this._cache = {};
+    }
+
+    if (modelName && !id && !query) {
+      // remove all cache for certain model
+      delete this._cache[modelName];
+      return;
+    }
+
+    const cacheKey = this._getCacheKeyForQuery(modelName, id, query);
+    // TODO: use delete instead of deepSet here somehow
+    deepSet(this, cacheKey, undefined);
+
+    if (id && model) {
+      // remove the model also from all the query caches
+      const cacheKeys = Object.keys(this._cache[modelName]);
+      cacheKeys.forEach(cacheKey => {
+        const cache = this._cache[modelName][cacheKey];
+        if (!cache) {
+          return;
+        }
+
+        const { cachedData } = cache;
+
+        if (cachedData === model) {
+          delete this._cache[cacheKey];
+        } else if (isArray(cachedData)) {
+          cachedData.removeObject(model);
+        }
+      });
+    }
+  },
+
+  destroyRecord(model) {
+    return model.destroyRecord().then(() => {
+      const { modelName, id } = model._internalModel;
+      this.emptyCache(modelName, id, null, model);
+    });
+  },
+
+  unloadRecord(model) {
+    model.unloadRecord();
+    const { modelName, id } = model._internalModel;
+    this.emptyCache(modelName, id, null, model);
+  },
+
   _getQueryWithTrimmedInclude(cache, query) {
     let newQuery = { ...query };
     if (newQuery.include) {

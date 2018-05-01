@@ -112,6 +112,17 @@ model({ id }) {
 
 By default this is turned off, because prospector does not know what `admin: true` means and whether that param is just used for filtering or if it can have impact on the structure of the model - like it can be with JSONAPI sparse fieldsets for example.
 
+## Clearing cache
+
+```js
+prospector.emptyCache(); // clear the whole cache
+prospector.emptyCache('user'); // clear all the cache for the user model
+prospector.emptyCache('user', 1, { admin: true }); // clear only specific cache
+prospector.emptyCache('user', null, { admin: true, include: ['comments'] }); // clear only specific cache
+prospector.unloadRecord(model); // calls unloadRecord on the model and removes it from all the relevant caches
+await prospector.destroyRecord(model); // calls destroyRecord on the model and removes it from all the caches
+```
+
 
 ## Configuration
 
