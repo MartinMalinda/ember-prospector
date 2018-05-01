@@ -1,8 +1,9 @@
 import Service, { inject as service } from '@ember/service';
 import deepSet from 'ember-deep-set';
 import { isArray } from '@ember/array';
+import RSVP from 'rsvp';
 
-export default Ember.Service.extend({
+export default Service.extend({
   store: service(),
 
   /*
@@ -36,15 +37,18 @@ export default Ember.Service.extend({
     const cache = this._findInCache(modelName, null, query);
 
     if (this._isCacheValid(cache, query)) {
-      return cache.cacheData;
+      return RSVP.resolve(cache.cacheData);
     }
 
     let newQuery = { ...query };
-    if (cache && newQuery.include) {
-      newQuery.include = this._trimInclude(cache, newQuery.include);
+    if (newQuery.include) {
+      newQuery.include = this.serializeInclude(newQuery.include);
+      
+      if (cache) {
+        newQuery.include = this._trimInclude(cache, newQuery.include);
+      }
     }
     
-    newQuery.include = this.serializeInclude(newQuery.include);
     return this.get('store').query(modelName, newQuery).then(data => {
       this._saveToCache(modelName, null, newQuery, data);
       return data;
@@ -84,7 +88,7 @@ export default Ember.Service.extend({
   /*
     Universal method for finding cache for .query and .findRecord
   */
-  _findInCache(modelName, id, query) {
+  _findInCache() {
     return this.get(this._getCacheKeyForQuery(...arguments));
   },
 

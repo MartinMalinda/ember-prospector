@@ -3,7 +3,7 @@
 ## Installation
 
 ```sh
-ember install ember-prospector
+
 ```
 
 ## Usage
