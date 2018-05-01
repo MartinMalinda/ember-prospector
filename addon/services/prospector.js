@@ -11,19 +11,19 @@ export default Service.extend({
   _cache: {
     user: {
       'all': {
-        cacheData: [...],
+        cachedData: [...],
         alreadyIncluded: ['comments']
       },
       '{"admin":true}': {
-        cacheData: [...],
+        cachedData: [...],
         alreadyIncluded: []
       },
       '1': {
-        cacheData: Model,
+        cachedData: Model,
         alreadyIncluded: ['comments']
       },
       '2-{"admin":true}': {
-        cacheData: Model,
+        cachedData: Model,
         alreadyIncluded: []
       }
     }
@@ -31,22 +31,25 @@ export default Service.extend({
 
   */
 
-  _cache: {},
+  init() {
+    this._super(...arguments);
+    this._cache = {};
+  },
 
-  query(modelName, query) {
+  async query(modelName, query) {
     const cache = this._findInCache(modelName, null, query);
 
     if (this._isCacheValid(cache, query)) {
-      return RSVP.resolve(cache.cacheData);
+      return RSVP.resolve(cache.cachedData);
     }
 
     let newQuery = { ...query };
     if (newQuery.include) {
-      newQuery.include = this.serializeInclude(newQuery.include);
-      
       if (cache) {
         newQuery.include = this._trimInclude(cache, newQuery.include);
       }
+
+      newQuery.include = this.serializeInclude(newQuery.include);
     }
     
     return this.get('store').query(modelName, newQuery).then(data => {
@@ -144,8 +147,8 @@ export default Service.extend({
       });
     }
 
-    // update the cacheData just in case, or for potential usecases of `reload: true`
-    cache.cacheData = data;
+    // update the cachedData just in case, or for potential usecases of `reload: true`
+    cache.cachedData = data;
   },
 
   deserializeInclude(include) {

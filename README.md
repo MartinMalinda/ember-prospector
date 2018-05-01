@@ -49,7 +49,6 @@ Moreover, when accessing `user.threads` or `user.comments` again, there won't be
 ## TODO
 
 - [ ] add support for `findRecord` with `include`
-- [ ] add tests
 - [ ] add an extra abstraction that would allow returning already loaded data right away and lazy loading the rest
 - [ ] add support for `backgroundReload`
 =======
