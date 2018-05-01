@@ -36,13 +36,59 @@ export default Service.extend({
     this._cache = {};
   },
 
-  async query(modelName, query) {
+  query(modelName, query) {
     const cache = this._findInCache(modelName, null, query);
 
     if (this._isCacheValid(cache, query)) {
       return RSVP.resolve(cache.cachedData);
     }
 
+    const newQuery = this._getQueryWithTrimmedInclude(cache, query);
+    
+    return this.get('store').query(modelName, newQuery).then(data => {
+      this._saveToCache(modelName, null, newQuery, data);
+      return data;
+    });
+  },
+
+  findRecord(modelName, id, options = {}) {
+    let { include, adapterOptions } = options;
+    let query = adapterOptions && adapterOptions.query;
+    const cache = this._findInCache(modelName, id, query);
+    // include can be directly in options or inside adapterOptions.query
+    include = include || (query && query.include);
+    // make sure include is inside query so it's consistent with .query method
+    query = {
+      ...query,
+      include
+    };
+
+    if (this._isCacheValid(cache, query)) {
+      return RSVP.resolve(cache.cachedData);
+    }
+
+    const newQuery = this._getQueryWithTrimmedInclude(cache, query);
+    const newOptions = {
+      ...options,
+      adapterOptions: options.adapterOptions || {}
+    };
+    newOptions.adapterOptions.query = newQuery;
+    delete newOptions.include;
+    return this.get('store').findRecord(modelName, id, newOptions).then(data => {
+      this._saveToCache(modelName, id, newQuery, data);
+      return data;
+    });
+  },
+
+  shouldCreateFindRecordCacheFromQuery(/* modelName, query, data */) {
+    return false;
+  },
+
+  shouldStripQueryFromFindRecordCaching(/* modelName, query, data */) {
+    return false;
+  },
+
+  _getQueryWithTrimmedInclude(cache, query) {
     let newQuery = { ...query };
     if (newQuery.include) {
       if (cache) {
@@ -51,11 +97,8 @@ export default Service.extend({
 
       newQuery.include = this.serializeInclude(newQuery.include);
     }
-    
-    return this.get('store').query(modelName, newQuery).then(data => {
-      this._saveToCache(modelName, null, newQuery, data);
-      return data;
-    });
+
+    return newQuery;
   },
 
   /*
@@ -73,7 +116,8 @@ export default Service.extend({
 
     // if some relationship can't be found in the alreadIncluded ones, the cache can't be used
     const { alreadyIncluded } = cache;
-    return !query.include.find(relationshipName => {
+    const include = this.deserializeInclude(query.include);
+    return !include.find(relationshipName => {
       return !alreadyIncluded.includes(relationshipName);
     });
   },
@@ -125,6 +169,19 @@ export default Service.extend({
     } else {
       // the cache does not exist yet, create it
       this._createCache(...arguments);
+    }
+
+    if (!id && this.shouldCreateFindRecordCacheFromQuery(modelName, query, data)) {
+      let findRecordCacheQuery = {
+        ...query
+      };
+      if (this.shouldStripQueryFromFindRecordCaching(modelName, query, data)) {
+        findRecordCacheQuery = { include: findRecordCacheQuery.include };
+      }
+
+      data.forEach(model => {
+        this._saveToCache(modelName, model.id, findRecordCacheQuery, model);
+      });
     }
   },
 

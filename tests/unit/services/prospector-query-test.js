@@ -1,9 +1,7 @@
 import { moduleFor, test } from 'ember-qunit';
 import EmberObject from '@ember/object';
 
-moduleFor('service:prospector', 'Unit | Service | prospector', {
-  // Specify the other units that are required for this test.
-  // needs: ['service:foo']
+moduleFor('service:prospector', 'Unit | Service | prospector - query', {
 });
 
 const storeMock = EmberObject.extend({
@@ -12,7 +10,6 @@ const storeMock = EmberObject.extend({
   }
 });
 
-// Replace this with your real tests.
 test('query - underlying store.query is called when theres no cache', async function(assert) {
   assert.expect(2);
   const queryArgs = ['user', { admin: true }]
