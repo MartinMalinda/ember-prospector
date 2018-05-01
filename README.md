@@ -76,7 +76,7 @@ model({ id }) {
 
 ```
 
-If user will visit `/users/1` directly, prospector will fire `GET /users/1?include=settings,roles. On the other hand, when user visits `/users` first and then transitions to `/users/1`,
+If user will visit `/users/1` directly, prospector will fire `GET /users/1?include=settings,roles`. On the other hand, when user visits `/users` first and then transitions to `/users/1`,
 no request will be made in the `user.detail` route and the user will be retreived from cache. If the user afterwards transitions to `/users/1/comments` a new request will be made but only for the `comments` relationship because `roles` have already been loaded, prospector will fire `GET /users/1?include=comments`.
 
 ## Example 3 - prospector.query with params
@@ -108,6 +108,7 @@ model({ id }) {
     include: ['comments', 'roles']
   });
 }
+```
 
 By default this is turned off, because prospector does not know what `admin: true` means and whether that param is just used for filtering or if it can have impact on the structure of the model - like it can be with JSONAPI sparse fieldsets for example.
 
@@ -169,13 +170,6 @@ export default Service.extend({
   },
 });
 ```
-
-## TODO
-
-- [x] add support for `findRecord` with `include`
-- [ ] add an extra abstraction that would allow returning already loaded data right away and lazy loading the rest
-- [ ] add support for `backgroundReload`
-- [ ] add opinionated support for JSONAPI sparse fieldsets
 
 =======
 
