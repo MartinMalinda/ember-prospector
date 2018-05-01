@@ -120,9 +120,9 @@ To configure Prospector, create your own prospector service an extend it from th
 ```js
 // app/services/prospector.js
 
-import ProspectoService from 'ember-prospector/services/prospector';
+import ProspectorService from 'ember-prospector/services/prospector';
 
-export default Service.extend({
+export default ProspectorService.extend({
   shouldCreateFindRecordCacheFromQuery(/* modelName, query, data */) {
     /*
     This returns false by default
@@ -170,6 +170,33 @@ export default Service.extend({
   },
 });
 ```
+
+### Using without Ember Data
+
+The caching layer might be used without Ember data. Prospector only expects the store to have `findRecord` and `query` methods and that models have `id` property.
+
+All what's needed is to provide a store object to the inspector:
+
+```js
+// app/services/prospector.js
+
+import ProspectorService from 'ember-prospector/services/prospector';
+
+export default ProspectorService.extend({
+  store: {
+    query(modelName, query) {
+      return fetch(...);
+    },
+
+    findRecord(modelName, id, options) {
+      return fetch(...);
+    }
+  }
+});
+
+```
+
+Alternatively, a store service can be created: `app/services/store.js` with at least those two methods.
 
 =======
 
