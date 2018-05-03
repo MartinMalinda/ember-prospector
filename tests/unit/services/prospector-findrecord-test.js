@@ -52,7 +52,7 @@ test('findRecord - if the cache is VALID, cached data are returned', async funct
   });
 
   const cachedData = { id: 1 };
-  prospector._saveToCache('user', 1, {}, cachedData);
+  prospector._cacheLayer.saveToCache('user', 1, {}, cachedData);
 
   const data = await prospector.findRecord(...queryArgs);
   assert.deepEqual(data, cachedData, 'cached data are returned');
@@ -73,7 +73,7 @@ test('findRecord - if the cache has not enough includedData, store.findRecord is
   });
 
   const cachedData = { id: 1 };
-  prospector._saveToCache('user', 1, { include: ['comments'] }, cachedData);
+  prospector._cacheLayer.saveToCache('user', 1, { include: ['comments'] }, cachedData);
 
   await prospector.findRecord(...queryArgs);
 });

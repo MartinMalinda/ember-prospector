@@ -33,7 +33,7 @@ test('query - if the cache is VALID, cached data are returned', async function(a
   });
 
   const cachedData = [1, 2];
-  prospector._saveToCache('user', null, { admin: true }, cachedData);
+  prospector._cacheLayer.saveToCache('user', null, { admin: true }, cachedData);
 
   const data = await prospector.query(...queryArgs);
   assert.deepEqual(data, cachedData, 'cached data are returned');
@@ -54,7 +54,7 @@ test('query - if the cache is INVALID, cached data are NOT returned', async func
 
   const cachedData = [1, 2];
   // admin: false
-  prospector._saveToCache('user', null, { admin: false }, cachedData);
+  prospector._cacheLayer.saveToCache('user', null, { admin: false }, cachedData);
 
   await prospector.query(...queryArgs);
 });
@@ -72,7 +72,7 @@ test('query - if the cache has not enough includedData, store.query is called wi
   });
 
   const cachedData = [1, 2];
-  prospector._saveToCache('user', null, { admin: true, include: ['comments'] }, cachedData);
+  prospector._cacheLayer.saveToCache('user', null, { admin: true, include: ['comments'] }, cachedData);
 
   await prospector.query(...queryArgs);
 });
@@ -85,14 +85,14 @@ test('query - if the cache IS INVALID, store.query is called with ALL relationsh
   const prospector = this.subject({
     store: storeMock.create({
       async query(modelName, query) {
-        assert.deepEqual(query, { admin: true, include: 'roles,comments' }, 'Only roles are being included, comments were loaded previously');
+        assert.deepEqual(query, { admin: true, include: 'roles,comments' }, 'All relationships are being loaded');
       }
     })
   });
 
   const cachedData = [1, 2];
   // admin: false
-  prospector._saveToCache('user', null, { admin: false, include: ['comments'] }, cachedData);
+  prospector._cacheLayer.saveToCache('user', null, { admin: false, include: ['comments'] }, cachedData);
 
   await prospector.query(...queryArgs);
 });
@@ -106,7 +106,7 @@ test('query - query only with include returns cached data', async function(asser
   });
 
   const cachedData = [1, 2];
-  prospector._saveToCache('user', null, { include: ['comments', 'roles'] }, cachedData);
+  prospector._cacheLayer.saveToCache('user', null, { include: ['comments', 'roles'] }, cachedData);
   const data = await prospector.query(...queryArgs);
 
   assert.deepEqual(data, cachedData, 'cachedData are returned, all included data are available in cache');
@@ -125,7 +125,7 @@ test('query - query only with include, store.query is called with ONLY NECESSARY
   });
 
   const cachedData = [1, 2];
-  prospector._saveToCache('user', null, { include: ['comments'] }, cachedData);
+  prospector._cacheLayer.saveToCache('user', null, { include: ['comments'] }, cachedData);
   await prospector.query(...queryArgs);
 });
 
@@ -214,18 +214,18 @@ test('query - data are saved to cache BUT NOT USED - query only with include 1) 
 test('isCacheValid - false', async function(assert) {
   const prospector = this.subject({});
 
-  assert.equal(prospector._isCacheValid(null, {}), false);
-  assert.equal(prospector._isCacheValid({ alreadyIncluded: [] }, { include: ['roles'] }), false);
-  assert.equal(prospector._isCacheValid({ alreadyIncluded: ['roles'] }, { include: ['roles', 'comments'] }), false);
-  assert.equal(prospector._isCacheValid({ alreadyIncluded: ['threads'] }, { include: ['roles'] }), false);
+  assert.equal(prospector._cacheLayer.isCacheValid(null, {}), false);
+  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: [] }, { include: ['roles'] }), false);
+  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['roles'] }, { include: ['roles', 'comments'] }), false);
+  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['threads'] }, { include: ['roles'] }), false);
 });
 
 test('isCacheValid - true', async function(assert) {
   const prospector = this.subject({});
 
-  assert.equal(prospector._isCacheValid({ alreadyIncluded: [] }, { include: [] }), true);
-  assert.equal(prospector._isCacheValid({ alreadyIncluded: ['roles'] }, { include: [] }), true);
-  assert.equal(prospector._isCacheValid({ alreadyIncluded: ['roles', 'comments'] }, { include: ['roles'] }), true);
+  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: [] }, { include: [] }), true);
+  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['roles'] }, { include: [] }), true);
+  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['roles', 'comments'] }, { include: ['roles'] }), true);
 });
 
 test('trimInclude', async function(assert) {

@@ -20,20 +20,20 @@ test('destroyRecord - it removes the model from cache (simple)', async function(
   const prospector = this.subject({});
 
   const model = createFakeModel('user', 1);
-  prospector._saveToCache('user', 1, {}, model);
+  prospector._cacheLayer.saveToCache('user', 1, {}, model);
 
   await prospector.destroyRecord(model);
-  assert.notOk(prospector._findInCache('user', 1), 'The cache for user with id 1 does not exist anymore');
+  assert.notOk(prospector._cacheLayer.findInCache('user', 1), 'The cache for user with id 1 does not exist anymore');
 });
 
 test('unloadRecord - it removes the model from cache (simple)', async function(assert) {
   const prospector = this.subject({});
 
   const model = createFakeModel('user', 1);
-  prospector._saveToCache('user', 1, {}, model);
+  prospector._cacheLayer.saveToCache('user', 1, {}, model);
 
   prospector.unloadRecord(model);
-  assert.notOk(prospector._findInCache('user', 1), 'The cache for user with id 1 does not exist anymore');
+  assert.notOk(prospector._cacheLayer.findInCache('user', 1), 'The cache for user with id 1 does not exist anymore');
 });
 
 test('destroyRecord - it removes the model from cache (advanced - removing from queries)', async function(assert) {

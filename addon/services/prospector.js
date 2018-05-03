@@ -1,7 +1,7 @@
 import Service, { inject as service } from '@ember/service';
-import deepSet from 'ember-deep-set';
 import { isArray } from '@ember/array';
 import RSVP from 'rsvp';
+import CacheLayer from '../utils/cache-layer';
 
 export default Service.extend({
   store: service(),
@@ -33,20 +33,27 @@ export default Service.extend({
 
   init() {
     this._super(...arguments);
-    this._cache = {};
+
+    // create cacheLayer and pass down config helpers
+    this._cacheLayer = new CacheLayer({
+      shouldCreateFindRecordCacheFromQuery: this.shouldCreateFindRecordCacheFromQuery,
+      shouldStripQueryFromFindRecordCaching: this.shouldStripQueryFromFindRecordCaching,
+      deserializeInclude: this.deserializeInclude,
+      serializeInclude: this.deserializeInclude,
+    });
   },
 
   query(modelName, query) {
-    const cache = this._findInCache(modelName, null, query);
+    const cache = this._cacheLayer.findInCache(modelName, null, query);
 
-    if (this._isCacheValid(cache, query)) {
+    if (this._cacheLayer.isCacheValid(cache, query)) {
       return RSVP.resolve(cache.cachedData);
     }
 
     const newQuery = this._getQueryWithTrimmedInclude(cache, query);
     
     return this.get('store').query(modelName, newQuery).then(data => {
-      this._saveToCache(modelName, null, newQuery, data);
+      this._cacheLayer.saveToCache(modelName, null, newQuery, data);
       return data;
     });
   },
@@ -54,7 +61,7 @@ export default Service.extend({
   findRecord(modelName, id, options = {}) {
     let { include, adapterOptions } = options;
     let query = adapterOptions && adapterOptions.query;
-    const cache = this._findInCache(modelName, id, query);
+    const cache = this._cacheLayer.findInCache(modelName, id, query);
     // include can be directly in options or inside adapterOptions.query
     include = include || (query && query.include);
     // make sure include is inside query so it's consistent with .query method
@@ -63,7 +70,7 @@ export default Service.extend({
       include
     };
 
-    if (this._isCacheValid(cache, query)) {
+    if (this._cacheLayer.isCacheValid(cache, query)) {
       return RSVP.resolve(cache.cachedData);
     }
 
@@ -75,53 +82,9 @@ export default Service.extend({
     newOptions.adapterOptions.query = newQuery;
     delete newOptions.include;
     return this.get('store').findRecord(modelName, id, newOptions).then(data => {
-      this._saveToCache(modelName, id, newQuery, data);
+      this._cacheLayer.saveToCache(modelName, id, newQuery, data);
       return data;
     });
-  },
-
-  shouldCreateFindRecordCacheFromQuery(/* modelName, query, data */) {
-    return false;
-  },
-
-  shouldStripQueryFromFindRecordCaching(/* modelName, query, data */) {
-    return false;
-  },
-
-  emptyCache(modelName, id, query, model) {
-    if (!modelName && !id && !query) {
-      // empty the whole cache
-      return this._cache = {};
-    }
-
-    if (modelName && !id && !query) {
-      // remove all cache for certain model
-      delete this._cache[modelName];
-      return;
-    }
-
-    const cacheKey = this._getCacheKeyForQuery(modelName, id, query);
-    // TODO: use delete instead of deepSet here somehow
-    deepSet(this, cacheKey, undefined);
-
-    if (id && model) {
-      // remove the model also from all the query caches
-      const cacheKeys = Object.keys(this._cache[modelName]);
-      cacheKeys.forEach(cacheKey => {
-        const cache = this._cache[modelName][cacheKey];
-        if (!cache) {
-          return;
-        }
-
-        const { cachedData } = cache;
-
-        if (cachedData === model) {
-          delete this._cache[cacheKey];
-        } else if (isArray(cachedData)) {
-          cachedData.removeObject(model);
-        }
-      });
-    }
   },
 
   destroyRecord(model) {
@@ -137,124 +100,16 @@ export default Service.extend({
     this.emptyCache(modelName, id, null, model);
   },
 
-  _getQueryWithTrimmedInclude(cache, query) {
-    let newQuery = { ...query };
-    if (newQuery.include) {
-      if (cache) {
-        newQuery.include = this._trimInclude(cache, newQuery.include);
-      }
-
-      newQuery.include = this.serializeInclude(newQuery.include);
-    }
-
-    return newQuery;
+  shouldCreateFindRecordCacheFromQuery(/* modelName, query, data */) {
+    return false;
   },
 
-  /*
-    Cache is valid if the query is the same and all include data are available
-  */
-  _isCacheValid(cache, query) {
-    if (!cache) {
-      return false;
-    }
-
-    if (!query.include || !query.include.length) {
-      // no include specified, that means the cache can be used
-      return true;
-    }
-
-    // if some relationship can't be found in the alreadIncluded ones, the cache can't be used
-    const { alreadyIncluded } = cache;
-    const include = this.deserializeInclude(query.include);
-    return !include.find(relationshipName => {
-      return !alreadyIncluded.includes(relationshipName);
-    });
+  shouldStripQueryFromFindRecordCaching(/* modelName, query, data */) {
+    return false;
   },
 
-  /*
-    Returns include array without relationships that were already included in previous requests
-  */
-  _trimInclude(cache, include) {
-    const { alreadyIncluded } = cache;
-    return include.filter(relationshipName => {
-      return !alreadyIncluded.includes(relationshipName);
-    });
-  },
-
-  /*
-    Universal method for finding cache for .query and .findRecord
-  */
-  _findInCache() {
-    return this.get(this._getCacheKeyForQuery(...arguments));
-  },
-
-  _getCacheKeyForQuery(modelName, id, query) {
-    const queryWithoutInclude = this._queryWithoutInclude(query);
-    const queryIsEmpty = this._isEmptyQuery(queryWithoutInclude);
-
-    if (!id && queryIsEmpty) {
-      return `_cache.${modelName}.all`;
-    }
-
-    if (id && queryIsEmpty) {
-      return `_cache.${modelName}.${id}`;
-    }
-
-    const queryKey = JSON.stringify(queryWithoutInclude);
-    let resourceKey = queryKey;
-
-    if (id) {
-      resourceKey = `${id}-${queryKey}`;
-    }
-
-    return `_cache.${modelName}.${resourceKey}`;
-  },
-
-  _saveToCache(modelName, id, query, data) {
-    const existingCache = this._findInCache(modelName, id, query);
-
-    if (existingCache) {
-      this._updateCache(existingCache, modelName, id, query, data);
-    } else {
-      // the cache does not exist yet, create it
-      this._createCache(...arguments);
-    }
-
-    if (!id && this.shouldCreateFindRecordCacheFromQuery(modelName, query, data)) {
-      let findRecordCacheQuery = {
-        ...query
-      };
-      if (this.shouldStripQueryFromFindRecordCaching(modelName, query, data)) {
-        findRecordCacheQuery = { include: findRecordCacheQuery.include };
-      }
-
-      data.forEach(model => {
-        this._saveToCache(modelName, model.id, findRecordCacheQuery, model);
-      });
-    }
-  },
-
-  _createCache(modelName, id, query, data) {
-    const cacheKey = this._getCacheKeyForQuery(modelName, id, query);
-    deepSet(this, cacheKey, {
-      cachedData: data,
-      alreadyIncluded: this.deserializeInclude(query.include) || []
-    });
-  },
-
-  _updateCache(cache, modelName, id, query, data) {
-    if (query.include && query.include.length) {
-      // update the `alreadyIncluded`
-      const { alreadyIncluded } = cache;
-      this.deserializeInclude(query.include).forEach(relationshipName => {
-        if (!alreadyIncluded.includes(relationshipName)) {
-          alreadyIncluded.push(relationshipName);
-        }
-      });
-    }
-
-    // update the cachedData just in case, or for potential usecases of `reload: true`
-    cache.cachedData = data;
+  emptyCache() {
+    return this._cacheLayer.emptyCache(...arguments);
   },
 
   deserializeInclude(include) {
@@ -273,16 +128,30 @@ export default Service.extend({
     return include.join(',');
   },
 
-  _queryWithoutInclude(query) {
-    const _newQuery = {
-      ...query
-    };
+  /*
+    Returns a query without previously loaded relationships
+  */
+  _getQueryWithTrimmedInclude(cache, query) {
+    let newQuery = { ...query };
+    if (newQuery.include) {
+      if (cache) {
+        newQuery.include = this._trimInclude(cache, newQuery.include);
+      }
 
-    delete _newQuery.include;
-    return _newQuery;
+      newQuery.include = this.serializeInclude(newQuery.include);
+    }
+
+    return newQuery;
   },
 
-  _isEmptyQuery(query) {
-    return Object.keys(query).length === 0;
+  /*
+    Returns include array without relationships that were already included in previous requests
+  */
+  _trimInclude(cache, include) {
+    const { alreadyIncluded } = cache;
+    return include.filter(relationshipName => {
+      return !alreadyIncluded.includes(relationshipName);
+    });
   }
+
 });
