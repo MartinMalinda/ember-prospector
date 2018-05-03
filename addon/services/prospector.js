@@ -1,7 +1,7 @@
 import Service, { inject as service } from '@ember/service';
-import { isArray } from '@ember/array';
 import RSVP from 'rsvp';
 import CacheLayer from '../utils/cache-layer';
+import { deserializeInclude, serializeInclude } from '../utils/serializer';
 
 export default Service.extend({
   store: service(),
@@ -30,6 +30,9 @@ export default Service.extend({
   }
 
   */
+
+  deserializeInclude,
+  serializeInclude,
 
   init() {
     this._super(...arguments);
@@ -110,22 +113,6 @@ export default Service.extend({
 
   emptyCache() {
     return this._cacheLayer.emptyCache(...arguments);
-  },
-
-  deserializeInclude(include) {
-    if (isArray(include)) {
-      return include;
-    }
-
-    return include && include.split(',') || [];
-  },
-
-  serializeInclude(include) {
-    if (typeof include === 'string') {
-      return include;
-    }
-
-    return include.join(',');
   },
 
   /*

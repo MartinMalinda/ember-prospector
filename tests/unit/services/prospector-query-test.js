@@ -211,23 +211,6 @@ test('query - data are saved to cache BUT NOT USED - query only with include 1) 
   assert.deepEqual(data, [1], 'Third call to prospector.query (with sufficient include) returns cached data');
 });
 
-test('isCacheValid - false', async function(assert) {
-  const prospector = this.subject({});
-
-  assert.equal(prospector._cacheLayer.isCacheValid(null, {}), false);
-  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: [] }, { include: ['roles'] }), false);
-  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['roles'] }, { include: ['roles', 'comments'] }), false);
-  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['threads'] }, { include: ['roles'] }), false);
-});
-
-test('isCacheValid - true', async function(assert) {
-  const prospector = this.subject({});
-
-  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: [] }, { include: [] }), true);
-  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['roles'] }, { include: [] }), true);
-  assert.equal(prospector._cacheLayer.isCacheValid({ alreadyIncluded: ['roles', 'comments'] }, { include: ['roles'] }), true);
-});
-
 test('trimInclude', async function(assert) {
   const prospector = this.subject({});
 
