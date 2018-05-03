@@ -12,6 +12,7 @@ Router.map(function() {
     this.route('comments');
     this.route('comments-loading');
     this.route('edit-loading');
+    this.route('detail', { path: '/:id' });
   });
 });
 

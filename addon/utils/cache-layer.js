@@ -4,6 +4,32 @@ import { queryWithoutInclude, isEmptyQuery } from './query-helpers';
 import { get } from '@ember/object';
 
 export default class {
+
+  /*
+  
+  _cache: {
+    user: {
+      'all': {
+        cachedData: [...],
+        alreadyIncluded: ['comments']
+      },
+      '{"admin":true}': {
+        cachedData: [...],
+        alreadyIncluded: []
+      },
+      '1': {
+        cachedData: Model,
+        alreadyIncluded: ['comments']
+      },
+      '2-{"admin":true}': {
+        cachedData: Model,
+        alreadyIncluded: []
+      }
+    }
+  }
+
+  */
+
   constructor(configHelpers = {}) {
     this._cache = {};
     this._config = configHelpers;

@@ -1,5 +1,5 @@
-{{#with model.firstObject as |user|}}
-  <h2>Comments from user {{user.id}}</h2>
+{{#each model as |user|}}
+  <h2>Comments from {{#link-to "user.detail" user.id}}user {{user.id}}{{/link-to}}</h2>
 
   {{#each user.comments as |comment|}}
     <li>Comment {{comment.id}}</li>
@@ -8,4 +8,4 @@
   {{#each user.roles as |role|}}
     <li>Role {{user.id}}</li>
   {{/each}}
-{{/with}}
+{{/each}}

@@ -2,34 +2,13 @@ import Service, { inject as service } from '@ember/service';
 import RSVP from 'rsvp';
 import CacheLayer from '../utils/cache-layer';
 import { deserializeInclude, serializeInclude } from '../utils/serializer';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+import ObjectProxy from '@ember/object/proxy';
+
+const ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
 export default Service.extend({
   store: service(),
-
-  /*
-  
-  _cache: {
-    user: {
-      'all': {
-        cachedData: [...],
-        alreadyIncluded: ['comments']
-      },
-      '{"admin":true}': {
-        cachedData: [...],
-        alreadyIncluded: []
-      },
-      '1': {
-        cachedData: Model,
-        alreadyIncluded: ['comments']
-      },
-      '2-{"admin":true}': {
-        cachedData: Model,
-        alreadyIncluded: []
-      }
-    }
-  }
-
-  */
 
   deserializeInclude,
   serializeInclude,
@@ -62,16 +41,8 @@ export default Service.extend({
   },
 
   findRecord(modelName, id, options = {}) {
-    let { include, adapterOptions } = options;
-    let query = adapterOptions && adapterOptions.query;
+    const query = this._createQueryFromFindRecordOptions(options);
     const cache = this._cacheLayer.findInCache(modelName, id, query);
-    // include can be directly in options or inside adapterOptions.query
-    include = include || (query && query.include);
-    // make sure include is inside query so it's consistent with .query method
-    query = {
-      ...query,
-      include
-    };
 
     if (this._cacheLayer.isCacheValid(cache, query)) {
       return RSVP.resolve(cache.cachedData);
@@ -83,10 +54,54 @@ export default Service.extend({
       adapterOptions: options.adapterOptions || {}
     };
     newOptions.adapterOptions.query = newQuery;
-    delete newOptions.include;
+    newOptions.include = newQuery.include;
     return this.get('store').findRecord(modelName, id, newOptions).then(data => {
       this._cacheLayer.saveToCache(modelName, id, newQuery, data);
       return data;
+    });
+  },
+
+  lazyFindRecord(modelName, id, options = {}) {
+    // TODO: this is called for a second time, unnecessary, refactor
+    const query = this._createQueryFromFindRecordOptions(options);
+    const cache = this._cacheLayer.findInCache(modelName, id, query);
+    
+    const remainingRelationships = this._trimInclude(cache, query.include);
+
+    const mainPromise = this.findRecord(...arguments);
+    const hash = {};
+    if (cache) {
+      const model = this.get('store').peekRecord(modelName, id);
+      hash[modelName] = model;
+      cache.alreadyIncluded.forEach(relationshipName => {
+        hash[relationshipName] = model.get(relationshipName);
+      });
+    } else {
+      hash[modelName] = mainPromise;
+    }
+
+    remainingRelationships.forEach(relationshipName => {
+      hash[relationshipName] = mainPromise.then(model => {
+        return model.get(relationshipName);
+      });
+    });
+
+    return this._createHashProxy(hash);
+  },
+
+  _createHashProxy(hash) {
+    const hashProxy = {};
+    Object.keys(hash).forEach(key => {
+      const value = hash[key];
+      hashProxy[key] = this.createProxy(value);
+    });
+
+    return hashProxy;
+  },
+
+  createProxy(promise) {
+    return ObjectPromiseProxy.create({
+      promise: RSVP.resolve(promise)
     });
   },
 
@@ -115,6 +130,18 @@ export default Service.extend({
     return this._cacheLayer.emptyCache(...arguments);
   },
 
+  _createQueryFromFindRecordOptions(options) {
+    let { include, adapterOptions } = options;
+    let query = adapterOptions && adapterOptions.query;
+    // include can be directly in options or inside adapterOptions.query
+    include = include || (query && query.include);
+    // make sure include is inside query so it's consistent with .query method
+    return {
+      ...query,
+      include
+    };
+  },
+
   /*
     Returns a query without previously loaded relationships
   */
@@ -135,6 +162,10 @@ export default Service.extend({
     Returns include array without relationships that were already included in previous requests
   */
   _trimInclude(cache, include) {
+    if (!cache) {
+      return include;
+    }
+
     const { alreadyIncluded } = cache;
     return include.filter(relationshipName => {
       return !alreadyIncluded.includes(relationshipName);
