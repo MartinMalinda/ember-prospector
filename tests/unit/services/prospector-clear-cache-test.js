@@ -1,19 +1,19 @@
 import { moduleFor, test } from 'ember-qunit';
 import { A } from '@ember/array';
+import EmberObject from '@ember/object';
 
 moduleFor('service:prospector', 'Unit | Service | prospector - findRecord', {
 });
 
-function createFakeModel(modelName, id) {
-  return {
+export function createFakeModel(modelName, id, options = {}) {
+  return EmberObject.extend(options).create({
     id,
     _internalModel: { modelName, id },
     async destroyRecord() {
     },
     unloadRecord() {
-
-    }
-  };
+    },
+  });
 }
 
 test('destroyRecord - it removes the model from cache (simple)', async function(assert) {

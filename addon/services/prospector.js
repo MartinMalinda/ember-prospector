@@ -50,11 +50,16 @@ export default Service.extend({
 
     const newQuery = this._getQueryWithTrimmedInclude(cache, query);
     const newOptions = {
-      ...options,
-      adapterOptions: options.adapterOptions || {}
+      ...options
     };
-    newOptions.adapterOptions.query = newQuery;
-    newOptions.include = newQuery.include;
+
+    if (newOptions.adapterOptions) {
+      newOptions.adapterOptions.query = newQuery;
+    }
+
+    if (newOptions.include) {
+      newOptions.include = newQuery.include;
+    }
     return this.get('store').findRecord(modelName, id, newOptions).then(data => {
       this._cacheLayer.saveToCache(modelName, id, newQuery, data);
       return data;
@@ -71,7 +76,7 @@ export default Service.extend({
     const mainPromise = this.findRecord(...arguments);
     const hash = {};
     if (cache) {
-      const model = this.get('store').peekRecord(modelName, id);
+      const model = cache.cachedData;
       hash[modelName] = model;
       cache.alreadyIncluded.forEach(relationshipName => {
         hash[relationshipName] = model.get(relationshipName);

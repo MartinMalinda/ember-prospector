@@ -19,6 +19,7 @@ test('query - underlying store.query is called when theres no cache', async func
       async query(modelName, query) {
         assert.equal(modelName, queryArgs[0], 'modelName has been passed to query');
         assert.deepEqual(query, queryArgs[1], 'query has been passed to query');
+        return [];
       }
     })
   });
@@ -48,6 +49,7 @@ test('query - if the cache is INVALID, cached data are NOT returned', async func
     store: storeMock.create({
       async query() {
         assert.ok(true, 'store.query has been called');
+        return [];
       }
     })
   });
@@ -67,6 +69,7 @@ test('query - if the cache has not enough includedData, store.query is called wi
     store: storeMock.create({
       async query(modelName, query) {
         assert.deepEqual(query, { admin: true, include: 'roles' }, 'Only roles are being included, comments were loaded previously');
+        return [];
       }
     })
   });
@@ -120,6 +123,7 @@ test('query - query only with include, store.query is called with ONLY NECESSARY
     store: storeMock.create({
       async query(modelName, query) {
         assert.deepEqual(query, { include: 'roles' }, 'only roles are being included, comments were included before');
+        return [];
       }
     })
   });

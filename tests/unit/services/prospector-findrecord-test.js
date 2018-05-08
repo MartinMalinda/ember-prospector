@@ -25,8 +25,12 @@ test('findRecord - underlying store.findRecord is called when theres no cache', 
   await prospector.findRecord(...queryArgs);
 });
 
-test('findRecord - include is moved into query and adapterOptions', async function(assert) {
-  const queryArgs = ['user', 1, { include: [1] }];
+test('findRecord - include from adapterOptions can be used', async function(assert) { 
+  const queryArgs = ['user', 1, { adapterOptions: {
+    query: {
+      include: [1]
+    }
+  }}];
 
   const prospector = this.subject({
     store: storeMock.create({
@@ -66,8 +70,7 @@ test('findRecord - if the cache has not enough includedData, store.findRecord is
   const prospector = this.subject({
     store: storeMock.create({
       async findRecord(modelName, id, options) {
-        const query = options.adapterOptions.query;
-        assert.deepEqual(query, { include: 'roles' }, 'Only roles are being included, comments were loaded previously');
+        assert.deepEqual(options.include, 'roles', 'Only roles are being included, comments were loaded previously');
       }
     })
   });
@@ -188,7 +191,7 @@ test('shouldCreateFindRecordCacheFromQuery: true => findRecord will make a reque
       },
 
       async findRecord(modelName, id, options) {
-        assert.equal(options.adapterOptions.query.include, 'comments', 'roles dont need to be included, only comments');
+        assert.equal(options.include, 'comments', 'roles dont need to be included, only comments');
         return { id: 1, new: true };
       }
     })
