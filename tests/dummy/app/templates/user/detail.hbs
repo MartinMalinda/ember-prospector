@@ -1,33 +1,32 @@
 {{#if model.user.isPending}}
-  <h2>Loading...</h2>
+  <h2>Loading user...</h2>
 {{else}}
   <h2>
     User {{model.user.id}} <br>
   </h2>
+{{/if}}
+{{#if model.comments.isPending}}
+  Loading comments... <br>
+{{else}}
+  {{#each model.comments.content as |comment|}}
+    Comment {{comment.id}} <br>
+  {{/each}}
+{{/if}}
 
-  {{#if model.comments.isPending}}
-    Loading comments...
-  {{else}}
-    {{#each model.comments.content as |comment|}}
-      Comment {{comment.id}} <br>
-    {{/each}}
-  {{/if}}
+{{#if model.roles.isPending}}
+  Loading roles... <br>
+{{else}}
+  {{#each model.roles.content as |role|}}
+    Role {{role.id}} <br>
+  {{/each}}
+{{/if}}
 
-  {{#if model.roles.isPending}}
-    Loading roles...
-  {{else}}
-    {{#each model.roles.content as |role|}}
-      Role {{role.id}} <br>
-    {{/each}}
-  {{/if}}
-
-  {{#if model.threads.isPending}}
-    Loading threads...
-  {{else}}
-    {{#each model.threads.content as |thread|}}
-      Thread {{thread.id}} <br>
-    {{/each}}    
-  {{/if}}
+{{#if model.threads.isPending}}
+  Loading threads... <br>
+{{else}}
+  {{#each model.threads.content as |thread|}}
+    Thread {{thread.id}} <br>
+  {{/each}}    
 {{/if}}
 
 

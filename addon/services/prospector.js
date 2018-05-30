@@ -4,6 +4,7 @@ import CacheLayer from '../utils/cache-layer';
 import { deserializeInclude, serializeInclude } from '../utils/serializer';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import ObjectProxy from '@ember/object/proxy';
+import { removeLoadedRelationships } from '../utils/relationship-checker';
 
 const ObjectPromiseProxy = ObjectProxy.extend(PromiseProxyMixin);
 
@@ -48,7 +49,7 @@ export default Service.extend({
       return RSVP.resolve(cache.cachedData);
     }
 
-    const newQuery = this._getQueryWithTrimmedInclude(cache, query);
+    const newQuery = this._getTrimmedQueryByModel(cache, query, modelName, id);
     const newOptions = {
       ...options
     };
@@ -75,6 +76,7 @@ export default Service.extend({
 
     const mainPromise = this.findRecord(...arguments);
     const hash = {};
+    hash._main = mainPromise;
     if (cache) {
       const model = cache.cachedData;
       hash[modelName] = model;
@@ -104,9 +106,10 @@ export default Service.extend({
     return hashProxy;
   },
 
-  createProxy(promise) {
+  createProxy(data) {
+    const isPromise = data && data.then;
     return ObjectPromiseProxy.create({
-      promise: RSVP.resolve(promise)
+      promise: isPromise ? data : RSVP.resolve(data)
     });
   },
 
@@ -160,6 +163,15 @@ export default Service.extend({
       newQuery.include = this.serializeInclude(newQuery.include);
     }
 
+    return newQuery;
+  },
+
+  _getTrimmedQueryByModel(cache, query, modelName, id) {
+    const newQuery = this._getQueryWithTrimmedInclude(cache, query);
+    const localModel = this.get('store').peekRecord(modelName, id);
+    if (localModel) {
+      newQuery.include = removeLoadedRelationships(model, newQuery.include);
+    }
     return newQuery;
   },
 
