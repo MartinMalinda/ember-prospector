@@ -51,7 +51,8 @@ export default Service.extend({
 
     const newQuery = this._getTrimmedQueryByModel(cache, query, modelName, id);
     const newOptions = {
-      ...options
+      ...options,
+      reload: true
     };
 
     if (newOptions.adapterOptions) {
@@ -170,8 +171,9 @@ export default Service.extend({
     const newQuery = this._getQueryWithTrimmedInclude(cache, query);
     const localModel = this.get('store').peekRecord(modelName, id);
     if (localModel) {
-      newQuery.include = removeLoadedRelationships(model, newQuery.include);
+      newQuery.include = this.serializeInclude(removeLoadedRelationships(localModel, this.deserializeInclude(newQuery.include)));
     }
+
     return newQuery;
   },
 

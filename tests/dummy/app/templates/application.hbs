@@ -1,3 +1,30 @@
 {{link-to "User route (loads nothing)" "user"}}
 
 {{outlet}}
+
+<div style="display:none">
+  {{!-- This getter is needed for an observer to fire :| --}}
+  {{router.currentURL}}
+</div>
+
+<hr>
+
+{{#if prospectorCache}}
+  <ul>
+    {{#each-in prospectorCache as |cacheKey data|}}
+      <li>{{cacheKey}}</li>
+      <ul>
+        {{#each-in (get prospectorCache cacheKey) as |collectionName collectionData|}}
+          <li>{{cacheKey}}-{{collectionName}}</li>
+          <ul>
+            <li>alreadyIncluded: {{to-string collectionData.alreadyIncluded}}</li>
+          </ul>
+        {{/each-in}}
+      </ul>
+    {{/each-in}}
+  </ul>
+  <br>
+  <button {{action "emptyCache"}}>Empty cache</button>
+{{/if}}
+
+

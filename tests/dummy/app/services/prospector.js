@@ -1,7 +1,18 @@
 import ProspectorService from 'ember-prospector/services/prospector';
 import config from 'dummy/config/environment';
+import { task } from 'ember-concurrency';
 
 export default ProspectorService.extend({
+
+  yielder: task(function * (promise) {
+    const data = yield promise;
+    return data;
+  }),
+
+  createProxy(data) {
+    return this.get('yielder').perform(data);
+  },
+
   shouldCreateFindRecordCacheFromQuery(/* modelName, query, data */) {
     /*
     This returns false by default

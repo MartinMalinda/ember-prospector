@@ -1,3 +1,10 @@
 {{link-to "Edit route (loads roles and threads)" "user.edit"}} | {{link-to "Edit route (loads roles and comments)" "user.comments"}}
 
+<hr>
+
+{{#each model as |user|}}
+  {{link-to (concat "User" user.id) "user.detail" user.id}}
+{{/each}}
+
+<hr>
 {{outlet}}

@@ -1,30 +1,30 @@
-{{#if model.user.isPending}}
+{{#if model.user.isRunning}}
   <h2>Loading user...</h2>
 {{else}}
   <h2>
-    User {{model.user.id}} <br>
+    User {{model.user.value.id}} <br>
   </h2>
 {{/if}}
-{{#if model.comments.isPending}}
+{{#if model.comments.isRunning}}
   Loading comments... <br>
 {{else}}
-  {{#each model.comments.content as |comment|}}
+  {{#each model.comments.value as |comment|}}
     Comment {{comment.id}} <br>
   {{/each}}
 {{/if}}
 
-{{#if model.roles.isPending}}
+{{#if model.roles.isRunning}}
   Loading roles... <br>
 {{else}}
-  {{#each model.roles.content as |role|}}
+  {{#each model.roles.value as |role|}}
     Role {{role.id}} <br>
   {{/each}}
 {{/if}}
 
-{{#if model.threads.isPending}}
+{{#if model.threads.isRunning}}
   Loading threads... <br>
 {{else}}
-  {{#each model.threads.content as |thread|}}
+  {{#each model.threads.value as |thread|}}
     Thread {{thread.id}} <br>
   {{/each}}    
 {{/if}}
